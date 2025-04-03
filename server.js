@@ -4,10 +4,10 @@ const axios = require('axios');
 const cors = require('cors');
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 8080;
 
 const corsOptions = {
-    origin: process.env.CLIENT_ORIGIN,
+    origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
     optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
@@ -77,27 +77,38 @@ app.post('/api/ask-llama', async (req, res) => {
         return res.status(400).json({ error: "Venting is required, unless you want those thoughts to stay burdened in your head. Don't worry, no one will ever know what you wrote." });
     }
 
-    console.log(`Received prompt: "${userPrompt}". Making two calls to Cloudflare.`);
+    console.log(`Received prompt: "${userPrompt}". Making four calls to Cloudflare.`);
 
     const prompt1 = `${userPrompt} (Reply in one or two sentences. Respond in an overly sarcastic tone, as if egging on a negative thought. Try to sound clever in a cruel way. Do not respond supportively. Do not refer to yourself as 'I' or assume a personality. Do not respond with a question. No question marks. No '?'. Affirm negativity. Respond ironically.)`;
     const prompt2 = `${userPrompt} (Reply in one or two sentences. Respond optimistically. Maybe make a light-hearted joke. Do not ask for follow up questions. Do not say explicitly 'I am here to support you' or anything similar. Do not use 'we'. Do not assume a personality. Do not say 'It sounds like you're feeling' or anything similar. Do not use 'you, you're, or your'. Do not explicitly tell me what to 'think'. Do not mention 'the bright side'. Do not say 'bright side'. Be subtle. Do not use 'on (the) one hand'. Do not ask questions. No '?'. NO QUESTION MARKS. Do not use 'well', especially not at the start of a setence. Respond sarcastically. Use simple words. Do not explicitly mention 'silver linings'. Do not say 'but at least'. Do not say 'at least'. Do not use 'at least' at the beginning of a sentence. Do not say 'maybe'. Do not explicitly mention 'optimism' or 'optimist(s)'.)`;
+    const prompt3 = `${userPrompt} (Respond with just a short, relevant philosophical quote. Output only the quote itself, without quotation marks or attribution unless essential.)`;
+    const prompt4 = `${userPrompt} (Tell a short, relevant, clean joke related to this topic. Keep it very brief. Output only the joke.)`;
+
 
     try {
         const results = await Promise.all([
             getAiResponse(prompt1, accountId, apiToken),
-            getAiResponse(prompt2, accountId, apiToken)
+            getAiResponse(prompt2, accountId, apiToken),
+            getAiResponse(prompt3, accountId, apiToken),
+            getAiResponse(prompt4, accountId, apiToken)
         ]);
 
         const response1 = results[0];
         const response2 = results[1];
+        const response3 = results[2];
+        const response4 = results[3];
 
-        console.log('Received responses from Cloudflare:', response1, response2);
+        console.log('Received responses from Cloudflare:', response1, response2, response3, response4);
 
         res.status(200).json({
             answer1: response1.success ? response1.answer : null,
             error1: !response1.success ? response1.error : null,
             answer2: response2.success ? response2.answer : null,
             error2: !response2.success ? response2.error : null,
+            answer3: response3.success ? response3.answer : null,
+            error3: !response3.success ? response3.error : null,
+            answer4: response4.success ? response4.answer : null,
+            error4: !response4.success ? response4.error : null,
         });
 
     } catch (overallError) {
@@ -108,5 +119,5 @@ app.post('/api/ask-llama', async (req, res) => {
 
 app.listen(port, () => {
     console.log(`Secure AI backend server listening at http://localhost:${port}`);
-    console.log(`Allowing requests from: ${process.env.CLIENT_ORIGIN}`);
+    console.log(`Allowing requests from: ${process.env.CLIENT_ORIGIN || 'http://localhost:5173'}`);
 });
